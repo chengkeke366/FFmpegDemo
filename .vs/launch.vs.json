@@ -1,0 +1,85 @@
+{
+  "version": "0.2.1",
+  "defaults": {},
+  "configurations": [
+    {
+      "type": "default",
+      "project": "CMakeLists.txt",
+      "projectTarget": "avio_reading.exe",
+      "name": "avio_reading.exe",
+      "args": [
+        "C:/Users/chengkeke/Desktop/test.mp4"
+      ]
+    },
+    {
+      "type": "default",
+      "project": "CMakeLists.txt",
+      "projectTarget": "qsvdec.exe",
+      "name": "qsvdec.exe",
+      "args": [
+        "C:/Users/chengkeke/Desktop/test.mp4",
+        "C://Users/chengkeke/Desktop/test_qsv_852_480.yuv"
+      ]
+    },
+    {
+      "type": "default",
+      "project": "CMakeLists.txt",
+      "projectTarget": "hw_decode.exe",
+      "name": "hw_decode.exe",
+      "args": [
+        "cuda",
+        "C:/Users/chengkeke/Desktop/test.mp4",
+        "C://Users/chengkeke/Desktop/test_qsv_852_480.yuv"
+      ]
+    },
+    {
+      "type": "default",
+      "project": "CMakeLists.txt",
+      "projectTarget": "decode_audio.exe",
+      "name": "decode_audio.exe",
+      "args": [
+        "C:/Users/chengkeke/Desktop/test.aac",
+        "C:/Users/chengkeke/Desktop/test.pcm"
+      ]
+    },
+    {
+      "type": "default",
+      "project": "CMakeLists.txt",
+      "projectTarget": "resampling_audio.exe",
+      "name": "resampling_audio.exe",
+      "args": [
+        "C:/Users/chengkeke/Desktop/after_resampling.pcm"
+      ]
+    },
+    {
+      "type": "default",
+      "project": "CMakeLists.txt",
+      "projectTarget": "scaling_video.exe",
+      "name": "scaling_video.exe",
+      "args": [
+        "C:/Users/chengkeke/Desktop/sws_scale.jpg",
+        "1280*720"
+      ]
+    },
+    {
+      "type": "default",
+      "project": "CMakeLists.txt",
+      "projectTarget": "transcode_aac.exe",
+      "name": "transcode_aac.exe",
+      "args": [
+        "C:/Users/chengkeke/Desktop/qt.mp3",
+        "C:/Users/chengkeke/Desktop/qt_aac.flv"
+      ]
+    },
+    {
+      "type": "default",
+      "project": "CMakeLists.txt",
+      "projectTarget": "transcoding.exe",
+      "name": "transcoding.exe",
+      "args": [
+        "C:/Users/chengkeke/Desktop/test.mp4",
+        "C:/Users/chengkeke/Desktop/test.flv"
+      ]
+    }
+  ]
+}
