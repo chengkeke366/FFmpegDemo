@@ -22,6 +22,11 @@ target_link_libraries(qsvdec avcodec avformat avutil)
 add_executable(decode_audio "decode_audio.cpp" "global.h")
 target_link_libraries(decode_audio avcodec avformat avutil)
 
+#encode
+add_executable(encode "encode_video.cpp")
+target_link_libraries(encode avcodecd avformatd avutild swresampled avfilterd)
+
+
 #resampling_audio
 add_executable(resampling_audio "resampling_audio.cpp")
 target_link_libraries(resampling_audio avcodecd avformatd avutild swresampled)
@@ -36,6 +41,5 @@ add_executable(transcode_aac "transcode_aac.cpp")
 target_link_libraries(transcode_aac avcodecd avformatd avutild swresampled)
 
 #transcoding
-
 add_executable(transcoding "transcoding.cpp")
 target_link_libraries(transcoding avcodecd avformatd avutild swresampled avfilterd)
