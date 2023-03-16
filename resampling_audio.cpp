@@ -31,40 +31,25 @@ static int get_format_from_sample_fmt(const char** fmt,
         av_get_sample_fmt_name(sample_fmt));
     return AVERROR(EINVAL);
 }
-/**
- * Fill dst buffer with nb_samples, generated starting from t.
- */
-static void fill_samples(double* dst, int nb_samples, int nb_channels, int sample_rate, double* t)
-{
-    int i, j;
-    double tincr = 1.0 / sample_rate, * dstp = dst;
-    const double c = 2 * M_PI * 440.0;
-    /* generate sin tone with 440Hz frequency and duplicated channels */
-    for (i = 0; i < nb_samples; i++) {
-        *dstp = sin(c * *t);
-        for (j = 1; j < nb_channels; j++)
-            dstp[j] = dstp[0];
-        dstp += nb_channels;
-        *t += tincr;
-    }
-}
+
 int main(int argc, char** argv)
 {
-    int64_t src_ch_layout = AV_CH_LAYOUT_STEREO, dst_ch_layout = AV_CH_LAYOUT_SURROUND;
-    int src_rate = 48000, dst_rate = 44100;
+    int64_t src_ch_layout = AV_CH_LAYOUT_STEREO, dst_ch_layout = AV_CH_LAYOUT_STEREO;
+    int src_rate = 44100, dst_rate = 44100;
     uint8_t** src_data = NULL, ** dst_data = NULL;
     int src_nb_channels = 0, dst_nb_channels = 0;
     int src_linesize, dst_linesize;
     int src_nb_samples = 1024, dst_nb_samples, max_dst_nb_samples;
-    enum AVSampleFormat src_sample_fmt = AV_SAMPLE_FMT_DBL, dst_sample_fmt = AV_SAMPLE_FMT_S16;
-    const char* dst_filename = NULL;
-    FILE* dst_file;
-    int dst_bufsize;
+    enum AVSampleFormat src_sample_fmt = AV_SAMPLE_FMT_FLT, dst_sample_fmt = AV_SAMPLE_FMT_S16;
+    const char* src_filename = NULL;
+    const char* des_filename = NULL;
+    FILE* src_file = nullptr;
+    FILE* dst_file = nullptr;
     const char* fmt;
     struct SwrContext* swr_ctx;
     double t;
     int ret;
-    if (argc != 2) {
+    if (argc != 3) {
         fprintf(stderr, "Usage: %s output_file\n"
             "API example program to show how to resample an audio stream with libswresample.\n"
             "This program generates a series of audio frames, resamples them to a specified "
@@ -72,12 +57,24 @@ int main(int argc, char** argv)
             argv[0]);
         exit(1);
     }
-    dst_filename = argv[1];
-    dst_file = fopen(dst_filename, "wb");
-    if (!dst_file) {
-        fprintf(stderr, "Could not open destination file %s\n", dst_filename);
+    src_filename = argv[1];
+    src_file = fopen(src_filename, "rb");
+    uint8_t src[4096];
+    memset(src,0,4096);
+    ret = fread(src,4096,1,src_file);
+    if (!src_file) {
+        fprintf(stderr, "Could not open src file %s\n", src_filename);
         exit(1);
     }
+
+    des_filename = argv[2];
+    dst_file = fopen(des_filename, "ab");
+    if (!dst_file) {
+        fprintf(stderr, "Could not open des file %s\n", des_filename);
+        exit(1);
+    }
+
+    //1. 重采样上下文
     /* create resampler context */
     swr_ctx = swr_alloc();
     if (!swr_ctx) {
@@ -97,6 +94,8 @@ int main(int argc, char** argv)
         fprintf(stderr, "Failed to initialize the resampling context\n");
         goto end;
     }
+
+    //2. 输入缓冲区
     /* allocate source and destination samples buffers */
     src_nb_channels = av_get_channel_layout_nb_channels(src_ch_layout);
     ret = av_samples_alloc_array_and_samples(&src_data, &src_linesize, src_nb_channels,
@@ -105,12 +104,15 @@ int main(int argc, char** argv)
         fprintf(stderr, "Could not allocate source samples\n");
         goto end;
     }
+
+
+    //3. 输出缓冲区
     /* compute the number of converted samples: buffering is avoided
      * ensuring that the output buffer will contain at least all the
      * converted input samples */
+    //a*b/c  计算重采样输出样本数
     max_dst_nb_samples = dst_nb_samples =
         av_rescale_rnd(src_nb_samples, dst_rate, src_rate, AV_ROUND_UP);
-
     /* buffer is going to be directly written to a rawaudio file, no alignment */
     dst_nb_channels = av_get_channel_layout_nb_channels(dst_ch_layout);
     ret = av_samples_alloc_array_and_samples(&dst_data, &dst_linesize, dst_nb_channels,
@@ -119,56 +121,23 @@ int main(int argc, char** argv)
         fprintf(stderr, "Could not allocate destination samples\n");
         goto end;
     }
-    
-    t = 0;
-    do {
-        /* generate synthetic audio */
-        fill_samples((double*)src_data[0], src_nb_samples, src_nb_channels, src_rate, &t);
-        
-        /* compute destination number of samples */
-        //输入的帧可能没有全部处理，有可能存在数据积压，将积压帧进行处理
-        int64_t delay = swr_get_delay(swr_ctx, src_rate);
-        int get_out_samples = swr_get_out_samples(swr_ctx, src_nb_samples);
+    //重采样buffer大小
+    int dst_bufsize = dst_nb_channels * dst_nb_samples * av_get_bytes_per_sample(AV_SAMPLE_FMT_S16);
 
-        /*
-        将 a 个数据 , 由 c 采样率转换成 b 采样率后 , 返回多少数据
-        int64_t av_rescale_rnd(int64_t a, int64_t b, int64_t c, enum AVRounding rnd) av_const;
-        下面的方法时将 avFrame->nb_samples 个数据 , 由 avFrame->sample_rate 采样率转为 44100 采样率
-        返回的数据个数
-        AV_ROUND_UP : 向上取整
-     */
-        dst_nb_samples = av_rescale_rnd(delay + src_nb_samples, dst_rate, src_rate, AV_ROUND_UP);
-        std::cout << "swr_get_out_samples" << get_out_samples << " swr_get_delay:" << delay << " dst_nb_samples " << dst_nb_samples << std::endl;
-        if (dst_nb_samples > max_dst_nb_samples) {
-            av_freep(&dst_data[0]);
-            ret = av_samples_alloc(dst_data, &dst_linesize, dst_nb_channels,
-                dst_nb_samples, dst_sample_fmt, 1);
-            if (ret < 0)
-                break;
-            max_dst_nb_samples = dst_nb_samples;
-        }
-        /* convert to destination format */
-        ret = swr_convert(swr_ctx, dst_data, dst_nb_samples, (const uint8_t**)src_data, src_nb_samples);
-        if (ret < 0) {
-            fprintf(stderr, "Error while converting\n");
-            goto end;
-        }
-        dst_bufsize = av_samples_get_buffer_size(&dst_linesize, dst_nb_channels,
-            ret, dst_sample_fmt, 1);
-        if (dst_bufsize < 0) {
-            fprintf(stderr, "Could not get sample buffer size\n");
-            goto end;
-        }
-        printf("t:%f in:%d out:%d\n", t, src_nb_samples, ret);
-        fwrite(dst_data[0], 1, dst_bufsize, dst_file);
-    } while (t < 10);
-    if ((ret = get_format_from_sample_fmt(&fmt, dst_sample_fmt)) < 0)
-        goto end;
-    fprintf(stderr, "Resampling succeeded. Play the output file with the command:\n"
-        "ffplay -f %s -channel_layout %lld -channels %d -ar %d %s\n",
-        fmt, dst_ch_layout, dst_nb_channels, dst_rate, dst_filename);
+    //4. 重采样
+    while(fread(src_data[0],src_linesize,1,src_file)>0){
+        int swrConvertRet = swr_convert(swr_ctx,
+                                    dst_data,
+                                    dst_nb_samples,
+                                    (const uint8_t **) src_data,
+                                    src_nb_samples);
+
+        fwrite(dst_data[0], dst_bufsize, 1, dst_file);
+    }
+
 end:
     fclose(dst_file);
+    fclose(src_file);
     if (src_data)
         av_freep(&src_data[0]);
     av_freep(&src_data);

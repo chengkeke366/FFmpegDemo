@@ -27,6 +27,7 @@ extern "C"
 #include <libavutil/avassert.h>
 #include <libavutil/avstring.h>
 #include <libavutil/pixdesc.h>
+#include <libavutil/timestamp.h>
 #include <libavfilter/buffersink.h>
 #include <libavfilter/buffersrc.h>
 }

@@ -43,3 +43,16 @@ target_link_libraries(transcode_aac avcodecd avformatd avutild swresampled)
 #transcoding
 add_executable(transcoding "transcoding.cpp")
 target_link_libraries(transcoding avcodecd avformatd avutild swresampled avfilterd)
+
+add_executable(amix "amix.cpp")
+target_link_libraries(amix avcodecd avformatd avutild swresampled avfilterd)
+
+add_executable(decode_video "decode_video.cpp")
+target_link_libraries(decode_video avcodecd avformatd avutild swresampled avfilterd)
+
+
+add_executable(demuxing_decoding "demuxing_decoding.cpp")
+target_link_libraries(demuxing_decoding avcodecd avformatd avutild swresampled avfilterd)
+
+add_executable(bsf "demuxing_decoding.cpp")
+target_link_libraries(bsf avcodecd avformatd avutild swresampled avfilterd)
